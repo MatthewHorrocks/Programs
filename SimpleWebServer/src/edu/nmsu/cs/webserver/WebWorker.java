@@ -90,10 +90,19 @@ public class WebWorker implements Runnable
 					Thread.sleep(1);
 				line = r.readLine();
 
+				// make sure GET request is not default
 				if (line.contains("GET /") && !line.contains("GET / ")) {
+
+					// set default to false
 					isDefault = false;
+
+					// create new substring for the GET request
 					String sub = "SimpleWebServer" + line.substring(4, line.length()-8);
+
+					// create new file based on substring dir
 					File dir = new File(sub);
+
+					// check if the directory leads to a file
 					if (dir.isFile())
 						fileDir = sub;
 					else
@@ -148,6 +157,8 @@ public class WebWorker implements Runnable
 	 **/
 	private void writeContent(OutputStream os) throws Exception
 	{
+		// create default-gateway if there is no file
+		// attempting to be accessed
 		if (isDefault) {
 			os.write("<html><head></head><body>\n".getBytes());
 			os.write("<h3>Default gateway</h3>\n".getBytes());
@@ -157,25 +168,41 @@ public class WebWorker implements Runnable
 
 		else {
 
+			// write 404 error if it is not a file being accessed, and return
 			if (!isFile) {
 				write404(os);
 				return;
 			}
 
+			// inits two strings for tags
 			String date = "<cs371date>";
 			String server = "<cs371server>";
 
+			// instantiates a new date obj with formatting
 			Date d = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance();
 			df.setTimeZone(TimeZone.getTimeZone("GMT"));
 
+			// inits a string for a server 'phrase'
 			String serverPhrase = "Matt's Server";
 
+			// creates a substantial new string array
 			String[] read = new String[1000];
+
+			// create new file with directed file root
 			File file = new File(fileDir);
+
+			// instantiate new buffered reader (file reader to read the HTML file)
 			BufferedReader r = new BufferedReader(new FileReader(file));
+
+			// for loop until the end of the string array
 			for (int a = 0; a < read.length; a++) {
+
+				// reads the line, places it into string array
 				read[a] = r.readLine();
+
+				// checks for tags, instantiates new strings and replaces
+				// all instances of those tags with corrected date/phrase
 				if (read[a].contains(date)) {
 					String tempSub1 = read[a];
 					String tempSub2 = read[a];
@@ -184,6 +211,8 @@ public class WebWorker implements Runnable
 						tempSub2 = tempSub1.replaceAll(server, serverPhrase);
 					os.write(tempSub2.getBytes());
 				}
+				// if there were no tags, it will just write out what
+				// is insided the Output Stream.
 				else
 				os.write(read[a].getBytes());
 			}
