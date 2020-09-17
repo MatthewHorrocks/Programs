@@ -21,19 +21,26 @@ package edu.nmsu.cs.webserver;
  *
  **/
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 public class WebWorker implements Runnable
 {
 
 	private Socket socket;
+
+	private String fileDir;
+
+	private boolean isFile = true;
+	private boolean isDefault = true;
 
 	/**
 	 * Constructor: must have a valid open socket
@@ -72,27 +79,36 @@ public class WebWorker implements Runnable
 	/**
 	 * Read the HTTP request header.
 	 **/
-	private void readHTTPRequest(InputStream is)
-	{
-		String line;
+	private void readHTTPRequest(InputStream is) {
 		BufferedReader r = new BufferedReader(new InputStreamReader(is));
-		while (true)
-		{
-			try
-			{
+
+		String line = "";
+
+		while (true) {
+			try {
 				while (!r.ready())
 					Thread.sleep(1);
 				line = r.readLine();
+
+				if (line.contains("GET /") && !line.contains("GET / ")) {
+					isDefault = false;
+					String sub = "SimpleWebServer" + line.substring(4, line.length()-8);
+					File dir = new File(sub);
+					if (dir.isFile())
+						fileDir = sub;
+					else
+						isFile = false;
+				}
+
 				System.err.println("Request line: (" + line + ")");
 				if (line.length() == 0)
 					break;
-			}
-			catch (Exception e)
-			{
+			} catch (Exception e) {
 				System.err.println("Request error: " + e);
 				break;
 			}
 		}
+
 		return;
 	}
 
@@ -132,9 +148,56 @@ public class WebWorker implements Runnable
 	 **/
 	private void writeContent(OutputStream os) throws Exception
 	{
+		if (isDefault) {
+			os.write("<html><head></head><body>\n".getBytes());
+			os.write("<h3>Default gateway</h3>\n".getBytes());
+			os.write("</body><html>\n".getBytes());
+			os.close();
+		}
+
+		else {
+
+			if (!isFile) {
+				write404(os);
+				return;
+			}
+
+			String date = "<cs371date>";
+			String server = "<cs371server>";
+
+			Date d = new Date();
+			DateFormat df = DateFormat.getDateTimeInstance();
+			df.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+			String serverPhrase = "Matt's Server";
+
+			String[] read = new String[1000];
+			File file = new File(fileDir);
+			BufferedReader r = new BufferedReader(new FileReader(file));
+			for (int a = 0; a < read.length; a++) {
+				read[a] = r.readLine();
+				if (read[a].contains(date)) {
+					String tempSub1 = read[a];
+					String tempSub2 = read[a];
+					tempSub1 = read[a].replaceAll(date, df.format(d));
+					if (read[a].contains(server))
+						tempSub2 = tempSub1.replaceAll(server, serverPhrase);
+					os.write(tempSub2.getBytes());
+				}
+				else
+				os.write(read[a].getBytes());
+			}
+
+			os.close();
+
+		}
+	}
+
+	private void write404(OutputStream os) throws Exception {
 		os.write("<html><head></head><body>\n".getBytes());
-		os.write("<h3>My web server works!</h3>\n".getBytes());
-		os.write("</body></html>\n".getBytes());
+		os.write("<h3>404 Not Found</h3>\n".getBytes());
+		os.write("</body><html>\n".getBytes());
+		os.close();
 	}
 
 } // end class
