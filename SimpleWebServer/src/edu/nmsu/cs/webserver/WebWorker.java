@@ -38,6 +38,7 @@ public class WebWorker implements Runnable
 	private Socket socket;
 
 	private String fileDir;
+	private String mimeType;
 
 	private boolean isFile = true;
 	private boolean isDefault = true;
@@ -63,7 +64,7 @@ public class WebWorker implements Runnable
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
 			readHTTPRequest(is);
-			writeHTTPHeader(os, "text/html");
+			writeHTTPHeader(os, mimeType);
 			writeContent(os);
 			os.flush();
 			socket.close();
@@ -97,10 +98,12 @@ public class WebWorker implements Runnable
 					isDefault = false;
 
 					// create new substring for the GET request
-					String sub = "SimpleWebServer" + line.substring(4, line.length()-8);
+					String sub = "." + line.substring(4, line.length()-9);
 
 					// create new file based on substring dir
 					File dir = new File(sub);
+
+					mimeType = Files.probeContentType(dir.toPath());
 
 					// check if the directory leads to a file
 					if (dir.isFile())
@@ -186,38 +189,54 @@ public class WebWorker implements Runnable
 			// inits a string for a server 'phrase'
 			String serverPhrase = "Matt's Server";
 
+
 			// creates a substantial new string array
 			String[] read = new String[1000];
 
 			// create new file with directed file root
 			File file = new File(fileDir);
 
-			// instantiate new buffered reader (file reader to read the HTML file)
-			BufferedReader r = new BufferedReader(new FileReader(file));
+			// create type of content string
+			String type = fileDir.substring(fileDir.length()-4);
 
-			// for loop until the end of the string array
-			for (int a = 0; a < read.length; a++) {
+			// creates byte stream to read in images
+			if (!type.contains("html")) {
+				int bytes;
+				InputStream byteStream = new FileInputStream(fileDir);
 
-				// reads the line, places it into string array
-				read[a] = r.readLine();
-
-				// checks for tags, instantiates new strings and replaces
-				// all instances of those tags with corrected date/phrase
-				if (read[a].contains(date)) {
-					String tempSub1 = read[a];
-					String tempSub2 = read[a];
-					tempSub1 = read[a].replaceAll(date, df.format(d));
-					if (read[a].contains(server))
-						tempSub2 = tempSub1.replaceAll(server, serverPhrase);
-					os.write(tempSub2.getBytes());
+				while ((bytes = byteStream.read()) != -1) {
+					os.write(bytes);
 				}
-				// if there were no tags, it will just write out what
-				// is insided the Output Stream.
-				else
-				os.write(read[a].getBytes());
+				os.close();
 			}
+			else {
+				// instantiate new buffered reader (file reader to read the HTML file)
+				BufferedReader r = new BufferedReader(new FileReader(file));
 
-			os.close();
+				// for loop until the end of the string array
+				for (int a = 0; a < read.length; a++) {
+
+					// reads the line, places it into string array
+					read[a] = r.readLine();
+
+					// checks for tags, instantiates new strings and replaces
+					// all instances of those tags with corrected date/phrase
+					if (read[a].contains(date)) {
+						String tempSub1 = read[a];
+						String tempSub2 = read[a];
+						tempSub1 = read[a].replaceAll(date, df.format(d));
+						if (read[a].contains(server))
+							tempSub2 = tempSub1.replaceAll(server, serverPhrase);
+						os.write(tempSub2.getBytes());
+					}
+					// if there were no tags, it will just write out what
+					// is insided the Output Stream.
+					else
+						os.write(read[a].getBytes());
+				}
+
+				os.close();
+			}
 
 		}
 	}
