@@ -1,4 +1,5 @@
 package edu.nmsu.cs.circles;
+import org.junit.*;
 
 /***
  * Example JUnit testing class for Circle1 (and Circle)
@@ -47,9 +48,11 @@ public class Circle1Test
 		Assert.assertTrue(p.x == 0 && p.y == 1);
 	}
 
+/*
 
 public static void main(String args[]) { try { org.junit.runner.JUnitCore.runClasses(
 	 java.lang.Class.forName("Circle1Test")); } catch (Exception e) { System.out.println("Exception: " + e); } }
+*/
 
 
 }
